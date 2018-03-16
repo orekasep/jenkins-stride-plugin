@@ -9,8 +9,7 @@ public class StandardStrideServiceTest {
      */
     @Test
     public void publishWithBadHostShouldNotRethrowExceptions() {
-        StandardStrideService service = new StandardStrideService("token", "room");
-        service.setHost("hostvaluethatwillcausepublishtofail");
+        StandardStrideService service = new StandardStrideService("token", "http://hostvaluethatwillcausepublishtofail/room");
         service.publish("message");
     }
 }

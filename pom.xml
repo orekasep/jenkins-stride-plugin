@@ -21,7 +21,7 @@
     <groupId>org.jvnet.hudson.plugins</groupId>
 	<artifactId>stride</artifactId>
 	<packaging>hpi</packaging>
-	<version>0.1.0-SNAPSHOT</version>
+	<version>0.1.0</version>
 	<name>Jenkins Stride Plugin</name>
 	<description>A Build status publisher that notifies channels on a Stride server</description>
     <url>http://wiki.jenkins-ci.org/display/JENKINS/Stride+Plugin</url>

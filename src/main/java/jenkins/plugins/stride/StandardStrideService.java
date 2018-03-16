@@ -1,5 +1,7 @@
 package jenkins.plugins.stride;
 
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpStatus;
 import org.apache.commons.httpclient.methods.PostMethod;
@@ -9,6 +11,7 @@ import java.util.logging.Logger;
 
 import jenkins.model.Jenkins;
 import hudson.ProxyConfiguration;
+import org.apache.commons.httpclient.methods.StringRequestEntity;
 
 public class StandardStrideService implements StrideService {
 
@@ -33,46 +36,11 @@ public class StandardStrideService implements StrideService {
             PostMethod post = new PostMethod(conversationURL);
 
             try {
-                String m = message.replaceAll("\"", "\\\"");
-                String tmpl = "{\n" +
-                        "  \"version\": 1,\n" +
-                        "  \"type\": \"doc\",\n" +
-                        "  \"content\": [\n" +
-                        "    {\n" +
-                        "      \"type\": \"panel\",\n" +
-                        "      \"attrs\": {\n" +
-                        "        \"panelType\": \""+panelType+"\"\n" +
-                        "      },\n" +
-                        "      \"content\": [\n" +
-                        "        {\n" +
-                        "          \"type\": \"paragraph\",\n" +
-                        "          \"content\": [\n" +
-                        "            {\n" +
-                        "              \"type\": \"text\",\n" +
-                        "              \"text\": \""+m+" \"\n" +
-                        "            },\n" +
-                        "            {\n" +
-                        "              \"type\": \"text\",\n" +
-                        "              \"text\": \"open\",\n" +
-                        "              \"marks\": [\n" +
-                        "                {\n" +
-                        "                  \"type\": \"link\",\n" +
-                        "                  \"attrs\": {\n" +
-                        "                    \"href\": \""+openURL+"\"\n" +
-                        "                  }\n" +
-                        "                }\n" +
-                        "              ]\n" +
-                        "            }\n" +
-                        "          ]\n" +
-                        "        }\n" +
-                        "      ]\n" +
-                        "    }\n" +
-                        "  ]\n" +
-                        "}";
+                String data = notificationData(message, panelType, openURL);
                 post.addRequestHeader("Authorization", "Bearer " + token);
                 post.addRequestHeader("Content-Type","application/json");
                 post.getParams().setContentCharset("UTF-8");
-                post.setRequestBody(tmpl);
+                post.setRequestEntity(new StringRequestEntity(data, "application/json", "UTF-8"));
                 int responseCode = client.executeMethod(post);
                 String response = post.getResponseBodyAsString();
                 if(responseCode != HttpStatus.SC_CREATED ) {
@@ -84,7 +52,51 @@ public class StandardStrideService implements StrideService {
                 post.releaseConnection();
             }
     }
-    
+
+    private String notificationData(String message, String panelType, String openURL) {
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.accumulate("version", 1);
+        jsonObject.accumulate("type", "doc");
+        JSONObject panelContent = new JSONObject();
+        panelContent.accumulate("type", "panel");
+        JSONObject attrs = new JSONObject();
+        attrs.accumulate("panelType", panelType);
+        panelContent.accumulate("attrs", attrs);
+        JSONObject paragraphContent = new JSONObject();
+        paragraphContent.accumulate("type", "paragraph");
+
+        JSONArray messagesContent = new JSONArray();
+
+        JSONObject messageContent = new JSONObject();
+        messageContent.accumulate("type", "text");
+        messageContent.accumulate("text", message + " ");
+
+        JSONObject linkContent = new JSONObject();
+        linkContent.accumulate("type", "text");
+        linkContent.accumulate("text", "open");
+
+        JSONArray marks = new JSONArray();
+        JSONObject link = new JSONObject();
+        link.accumulate("type", "link");
+        JSONObject linkAttrs = new JSONObject();
+        linkAttrs.accumulate("href", openURL);
+        link.accumulate("attrs", linkAttrs);
+        marks.add(link);
+        linkContent.accumulate("marks", marks);
+
+        messagesContent.add(messageContent);
+        messagesContent.add(linkContent);
+        paragraphContent.accumulate("content", messagesContent);
+
+        JSONArray paragraphElements = new JSONArray();
+        paragraphElements.add(paragraphContent);
+        panelContent.accumulate("content", paragraphElements);
+        JSONArray panelElements = new JSONArray();
+        panelElements.add(panelContent);
+        jsonObject.accumulate("content", panelElements);
+        return jsonObject.toString();
+    }
+
     private HttpClient getHttpClient() {
         HttpClient client = new HttpClient();
         if (Jenkins.getInstance() != null) {
@@ -94,9 +106,5 @@ public class StandardStrideService implements StrideService {
             }
         }
         return client;
-    }
-
-    void setHost(String host) {
-
     }
 }
